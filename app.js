@@ -1,12 +1,14 @@
+
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const mongoose = require("mongoose");
 
+
 // routes
 const indexRouter = require("./routes/index");
-const apiRouter = require("./routes/users");
+const apiRouter = require("./routes/API/users");
 
 // connecting app to mongodb
 mongoose.connect(
@@ -16,6 +18,7 @@ mongoose.connect(
     console.log("Connected to mongoDB", err ? false : true);
   }
 );
+
 
 // initializing express in App
 const app = express();

@@ -18,3 +18,4 @@ exports.authenticate = (req, res, next) => {
     res.json({ success: false, message: "Token not found" });
   }
 };
+

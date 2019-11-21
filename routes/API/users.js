@@ -1,16 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models/user");
+const User = require("../../models/user");
 const jwt = require("jsonwebtoken");
-const auth = require("../modules/auth")
+const auth = require("../../modules/auth")
 const logged = auth.authenticate;
 
 // register user
 
-router.post("/", (req, res, next) => {
+router.post("/",(req, res, next) => {
   User.create(req.body, (err, user) => {
     if (err) return next(err);
-    res.json({ user });
+    res.json(user);
   });
 });
 
@@ -38,12 +38,6 @@ router.post("/login", (req, res, next) => {
   });
 });
 
-// test protected route
-
-router.get("/protected",logged,(req,res)=> {
-  res.json({success:true,
-  message:'you are authorized'});
-})
 
 const articlesRouter = require("./articles");
 router.use('/articles',articlesRouter);

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const Article = require("../models/article");
-const Comment = require("../models/comment");
+const Article = require("../../models/article");
+const Comment = require("../../models/comment");
 
 ///////////////////////////////////////// articles /////////////////////////////////////////
 
@@ -78,6 +78,7 @@ router.delete("/:slug", (req, res, next) => {
           success: false,
            message: "no articles to delete!" 
         });
+      
     res.json({ success: true, message: "Article deleted succesfully" });
   });
 });
