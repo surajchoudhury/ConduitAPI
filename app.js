@@ -1,15 +1,20 @@
-
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const mongoose = require("mongoose");
+const passport = require("passport");
+const session = require("express-session");
+const MongoStore = require("connect-mongo")(session);
 
+require("dotenv").config();
+require("./modules/passport");
 
 // routes
 const indexRouter = require("./routes/index");
-const apiRouter = require("./routes/API/users");
-
+const apiRouter = require("./routes/api/users");
+const profileRouter = require("./routes/api/profile");
+const articlesRouter = require("./routes/api/articles");
 // connecting app to mongodb
 mongoose.connect(
   "mongodb://localhost/conduit",
@@ -18,7 +23,6 @@ mongoose.connect(
     console.log("Connected to mongoDB", err ? false : true);
   }
 );
-
 
 // initializing express in App
 const app = express();
@@ -30,8 +34,26 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// session
+app.use(
+  session({
+    secret: process.env.secret,
+    resave: false,
+    saveUninitialized: false,
+    store: new MongoStore({
+      mongooseConnection: mongoose.connection
+    })
+  })
+);
+
+//passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // routes
 app.use("/", indexRouter);
 app.use("/api/v1/users", apiRouter);
+app.use("/api/v1/profile", profileRouter);
+app.use("api/v1/articles", articlesRouter);
 
 module.exports = app;

@@ -2,22 +2,12 @@ const express = require("express");
 const router = express.Router();
 const Article = require("../../models/article");
 const Comment = require("../../models/comment");
+const auth = require("../../modules/auth")
+const loggedUser = auth.verifyToken;
 
 ///////////////////////////////////////// articles /////////////////////////////////////////
 
-// post article
 
-router.post("/", (req, res, next) => {
-  Article.create(req.body, (err, article) => {
-    if (err) return next(err);
-    if (!article)
-      return res.json({
-        success: false,
-        message: "no articles to post!"
-      });
-    res.json(article);
-  });
-});
 
 // get all articles
 
@@ -51,6 +41,26 @@ router.get("/:slug", (req, res, next) => {
       res.json(article);
     });
 });
+
+// /////////////////////////////// logged user can only access //////////////////////////
+
+
+router.use(loggedUser);
+
+// post article
+
+router.post("/", (req, res, next) => {
+  Article.create(req.body, (err, article) => {
+    if (err) return next(err);
+    if (!article)
+      return res.json({
+        success: false,
+        message: "no articles to post!"
+      });
+    res.json(article);
+  });
+});
+
 
 // update article
 

@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const bcrypt = require("bcrypt");
@@ -18,6 +17,26 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true
+    },
+    image: {
+      type: String
+    },
+    bio: {
+      type: String
+    },
+    following: {
+      type: [String]
+    },
+    followers: {
+      type: [String]
+    },
+    comment: {
+      type: Schema.Types.ObjectId,
+      ref: "Comment"
+    },
+    article: {
+      type: Schema.Types.ObjectId,
+      ref: "Article"
     }
   },
   { timestamps: true }
@@ -35,14 +54,11 @@ userSchema.pre("save", function(next) {
   }
 });
 
-
 userSchema.methods.verifyPassword = function(password, done) {
   bcrypt.compare(password, this.password, (err, matched) => {
     if (err) return done(null, false);
     done(null, matched);
   });
 };
-
-
 
 module.exports = mongoose.model("User", userSchema);

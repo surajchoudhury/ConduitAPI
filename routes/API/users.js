@@ -2,12 +2,31 @@ const express = require("express");
 const router = express.Router();
 const User = require("../../models/user");
 const jwt = require("jsonwebtoken");
-const auth = require("../../modules/auth")
-const logged = auth.authenticate;
+const passport = require("passport");
+const auth = require("../../modules/auth");
+const loggedUser = auth.verifyToken;
+
+// oAuth github login
+
+router.get("/auth/github", passport.authenticate("github"));
+
+router.get(
+  "/auth/github/callback",
+  passport.authenticate(
+    "github",
+    { failureRedirect: "/api/v1/users/login" },
+    (req, res) => {
+      res.json({
+        success: true,
+        message: "successfully loggedin through github"
+      });
+    }
+  )
+);
 
 // register user
 
-router.post("/",(req, res, next) => {
+router.post("/", (req, res, next) => {
   User.create(req.body, (err, user) => {
     if (err) return next(err);
     res.json(user);
@@ -27,8 +46,16 @@ router.post("/login", (req, res, next) => {
       //  jwt authentication
 
       jwt.sign(
-        { userId: user._id, email: user.email, username: user.username },
-        "jsonsecret",
+        {
+          userId: user._id,
+          email: user.email,
+          username: user.username,
+          image:user.image,
+          bio:user.bio,
+          followers: user.followers,
+          following: user.following
+        },
+        process.env.secret,
         (err, token) => {
           if (err) return next(err);
           res.json({ success: true, message: "you are logged in", token });
@@ -38,8 +65,39 @@ router.post("/login", (req, res, next) => {
   });
 });
 
+// //////////////////////// only current logged user can access //////////////////////
 
-const articlesRouter = require("./articles");
-router.use('/articles',articlesRouter);
+router.use(loggedUser);
+
+// get the current user
+
+router.get("/", (req, res, next) => {
+  let { username } = req.user.user;
+  User.findOne({ username }, "-password", (err, user) => {
+    if (err)
+      return res.status(422).json({
+        errors: {
+          body: "unexpected error!"
+        }
+      });
+    res
+      .contentType("application/json")
+      .status(200)
+      .json(user);
+  });
+});
+
+// update current user
+
+router.put("/", (req, res, next) => {
+  let { username } = req.user.user;
+  User.findOneAndUpdate({ username }, req.body, (err, user) => {
+    if (err) return next(err);
+    res
+      .contentType("application/json")
+      .status(200)
+      .json(user);
+  });
+});
 
 module.exports = router;

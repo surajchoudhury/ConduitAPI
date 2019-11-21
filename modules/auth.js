@@ -1,21 +1,25 @@
 const jwt = require("jsonwebtoken");
 
-exports.authenticate = (req, res, next) => {
+exports.verifyToken = (req, res, next) => {
   let token = req.headers.authorization;
   if (token) {
-    jwt.verify(token, "jsonsecret", (err, decoded) => {
+    jwt.verify(token, process.env.secret, (err, decoded) => {
       if (err) return next(err);
-      let user = {
+      req.user = {
         user: {
+          userId: decoded.userId,
           email: decoded.email,
           token,
-          username: decoded.username
+          image:decoded.image,
+          bio:decoded.bio,
+          username: decoded.username,
+          followers:decoded.followers,
+          following:decoded.following
         }
       };
-      res.json(user);
+      next();
     });
   } else {
-    res.json({ success: false, message: "Token not found" });
+    res.status(401).json({ success: false, message: "Token not found" });
   }
 };
-
