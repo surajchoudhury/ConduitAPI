@@ -6,7 +6,6 @@ exports.verifyToken = (req, res, next) => {
     jwt.verify(token, process.env.secret, (err, decoded) => {
       if (err) return next(err);
       req.user = {
-        user: {
           userId: decoded.userId,
           email: decoded.email,
           token,
@@ -15,7 +14,6 @@ exports.verifyToken = (req, res, next) => {
           username: decoded.username,
           followers:decoded.followers,
           following:decoded.following
-        }
       };
       next();
     });

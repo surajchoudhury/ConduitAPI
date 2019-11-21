@@ -50,8 +50,8 @@ router.post("/login", (req, res, next) => {
           userId: user._id,
           email: user.email,
           username: user.username,
-          image:user.image,
-          bio:user.bio,
+          image: user.image,
+          bio: user.bio,
           followers: user.followers,
           following: user.following
         },
@@ -65,14 +65,14 @@ router.post("/login", (req, res, next) => {
   });
 });
 
-// //////////////////////// only current logged user can access //////////////////////
+////////////////////////// only current logged user can access //////////////////////
 
 router.use(loggedUser);
 
 // get the current user
 
 router.get("/", (req, res, next) => {
-  let { username } = req.user.user;
+  let { username } = req.user;
   User.findOne({ username }, "-password", (err, user) => {
     if (err)
       return res.status(422).json({
@@ -90,9 +90,10 @@ router.get("/", (req, res, next) => {
 // update current user
 
 router.put("/", (req, res, next) => {
-  let { username } = req.user.user;
-  User.findOneAndUpdate({ username }, req.body, (err, user) => {
+  let { username } = req.user;
+  User.findOneAndUpdate({ username }, req.body, { new: true }, (err, user) => {
     if (err) return next(err);
+    if (!user) return res.status(422).json("User not found!");
     res
       .contentType("application/json")
       .status(200)

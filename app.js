@@ -13,8 +13,9 @@ require("./modules/passport");
 // routes
 const indexRouter = require("./routes/index");
 const apiRouter = require("./routes/api/users");
-const profileRouter = require("./routes/api/profile");
+const profileRouter = require("./routes/api/profiles");
 const articlesRouter = require("./routes/api/articles");
+
 // connecting app to mongodb
 mongoose.connect(
   "mongodb://localhost/conduit",
@@ -53,7 +54,7 @@ app.use(passport.session());
 // routes
 app.use("/", indexRouter);
 app.use("/api/v1/users", apiRouter);
-app.use("/api/v1/profile", profileRouter);
+app.use("/api/v1/profiles", profileRouter);
 app.use("api/v1/articles", articlesRouter);
 
 module.exports = app;
