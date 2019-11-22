@@ -57,4 +57,11 @@ app.use("/api/v1/users", apiRouter);
 app.use("/api/v1/profiles", profileRouter);
 app.use("api/v1/articles", articlesRouter);
 
+
+// error handler
+
+app.use((err,req,res,next)=> {
+  res.status(500).json({err:"Unexpected error! Something wrong with your code."});
+})
+
 module.exports = app;
