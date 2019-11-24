@@ -7,7 +7,7 @@ const userSchema = new Schema(
     username: {
       type: String,
       required: true,
-      unique:true
+      unique: true
     },
     email: {
       type: String,
@@ -31,6 +31,12 @@ const userSchema = new Schema(
     followers: {
       type: [String]
     },
+    favorited: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Article"
+      }
+    ],
     comment: {
       type: Schema.Types.ObjectId,
       ref: "Comment"

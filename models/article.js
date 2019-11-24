@@ -31,14 +31,17 @@ const articleSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User"
     },
+    comments: {
+      type: [String]
+    },
     comment: {
       type: Schema.Types.ObjectId,
       ref: "Comment"
     },
-    favorites: {
-      type: [Schema.Types.ObjectId],
+    favorites: [{
+      type: Schema.Types.ObjectId,
       ref: "User"
-    }
+    }],
   },
   { timestamps: true }
 );
