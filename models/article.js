@@ -17,11 +17,7 @@ const articleSchema = new Schema(
     body: {
       type: String
     },
-    tagList: [
-      {
-        type: String
-      }
-    ],
+    tagList: [String],
     favorited: Boolean,
     favoritesCount: {
       type: Number,

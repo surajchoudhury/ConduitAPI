@@ -4,6 +4,7 @@ const Article = require("../../models/article");
 const Comment = require("../../models/comment");
 const auth = require("../../modules/auth");
 const User = require("../../models/user");
+const Tag = require("../../models/tag");
 const loggedUser = auth.verifyToken;
 
 /////////////////////////////////////// articles /////////////////////////////////////////
@@ -33,9 +34,9 @@ router.get("/feed", loggedUser, (req, res, next) => {
       user.following.forEach(user => {
         Article.find({ username: user })
           .populate("author", "username")
-          .exec((err, articles) => {
+          .exec((err, articleFeeds) => {
             if (err) return next(err);
-            return res.json({ articles });
+            return res.json({ articleFeeds });
           });
       });
     } else {
@@ -68,14 +69,47 @@ router.use(loggedUser);
 // post article
 
 router.post("/", (req, res, next) => {
-  Article.create(req.body, (err, article) => {
+  req.body.userId = req.user.userId;
+  Article.create(req.body, (err, createdArticle) => {
     if (err) return next(err);
-    if (!article)
+    if (!createdArticle)
       return res.json({
         success: false,
         message: "no articles to post!"
       });
-    res.json(article);
+
+    // createdArticle.author._id = req.user.userId;
+    
+    createdArticle.tagList.forEach(tag => {
+      Tag.findOne({ body: tag }, (err, foundTag) => {
+        if (err) return next(err);
+        if (!foundTag) {
+          Tag.create(
+            { article: createdArticle._id, body: tag },
+            (err, createdTag) => {
+              if (err) return next(err);
+            }
+          );
+        } else if (foundTag) {
+          Tag.findByIdAndUpdate(
+            foundTag._id,
+            { $push: { article: createdArticle } },
+            { new: true },
+            (err, createdTag) => {
+              if (err) return next(err);
+            }
+          );
+        }
+      });
+    });
+      // User.findByIdAndUpdate(
+      // req.article.userId,
+      // { $push: { article: createdArticle._id } },
+      // (err, createdArticle) => {
+      //   if (err) res.json({ message: "Can't create Article" });
+        res.status(200).json(createdArticle);
+      // }
+    // );
   });
 });
 
@@ -83,14 +117,22 @@ router.post("/", (req, res, next) => {
 
 router.put("/:slug", (req, res, next) => {
   let slug = req.params.slug;
-  Article.findOneAndUpdate({ slug }, req.body, (err, article) => {
+  Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
-    if (!article)
-      return res.json({
-        success: false,
-        message: "no articles to update!"
+    // console.log(req.user.userId, article.userId);
+    // if (req.user.userId == article.userId) {
+      Article.findOneAndUpdate({ slug }, req.body, (err, updatedArticle) => {
+        if (err) return next(err);
+        if (!article)
+          return res.json({
+            success: false,
+            message: "no articles to update!"
+          });
+        res.status(200).json(updatedArticle);
       });
-    res.json(article);
+    // } else {
+    //   res.json({ success: false, message: "You can't delete this article!" });
+    // }
   });
 });
 
@@ -106,13 +148,14 @@ router.delete("/:slug", (req, res, next) => {
         message: "no articles to delete!"
       });
 
-    res.json({ success: true, message: "Article deleted succesfully" });
+    res.status(200).json({ success: true, message: "Article deleted succesfully" });
   });
 });
 
 // ///////////////////////////////////// comments //////////////////////////////////////////
 
 // post comments
+
 router.post("/:slug/comments", (req, res, next) => {
   Comment.create(req.body, (err, comment) => {
     if (err) return next(err);
@@ -126,7 +169,7 @@ router.post("/:slug/comments", (req, res, next) => {
       { $push: { comments: comment._id } },
       { new: true },
       (err, article) => {
-        res.json(comment);
+        res.status(200).json(comment);
       }
     );
   });
@@ -142,39 +185,39 @@ router.get("/:slug/comments", (req, res, next) => {
         success: false,
         message: "no comments found!"
       });
-    res.json({ comments });
+    res.status(200).json({ comments });
   });
 });
 
 // get comment
 
-router.get("/:slug/comments/:id", (req, res, next) => {
-  let id = req.params.id;
-  Comment.findById(id, (err, comment) => {
-    if (err) return next(err);
-    if (!comment)
-      return res.json({
-        success: false,
-        message: "comment not found!"
-      });
-    res.json(comment);
-  });
-});
+// router.get("/:slug/comments/:id", (req, res, next) => {
+//   let id = req.params.id;
+//   Comment.findById(id, (err, comment) => {
+//     if (err) return next(err);
+//     if (!comment)
+//       return res.json({
+//         success: false,
+//         message: "comment not found!"
+//       });
+//     res.status(200).json(comment);
+//   });
+// });
 
 // update comment
 
-router.put("/:slug/comments/:id", (req, res, next) => {
-  let id = req.params.id;
-  Comment.findByIdAndUpdate(id, req.body, (err, comment) => {
-    if (err) return next(err);
-    if (!comment)
-      return res.json({
-        success: false,
-        message: "no comments to update!"
-      });
-    res.json(comment);
-  });
-});
+// router.put("/:slug/comments/:id", (req, res, next) => {
+//   let id = req.params.id;
+//   Comment.findByIdAndUpdate(id, req.body, (err, comment) => {
+//     if (err) return next(err);
+//     if (!comment)
+//       return res.json({
+//         success: false,
+//         message: "no comments to update!"
+//       });
+//     res.json(comment);
+//   });
+// });
 
 // delete comment
 
@@ -205,13 +248,15 @@ router.post("/:slug/favorite", (req, res, next) => {
       return res.json({ success: false, message: "No article Found!" });
     Article.findOneAndUpdate(
       { slug },
-      { $push: { favorites: req.user.userId } },{new:true},
+      { $push: { favorites: req.user.userId } },
+      { new: true },
       (err, favoritedArticle) => {
         if (err) return next(err);
         favoritedArticle.favoritesCount++;
         User.findOneAndUpdate(
           { username: req.user.username },
-          { $push: { favorited: article._id } },{new:true},
+          { $push: { favorited: article._id } },
+          { new: true },
           (err, favoritedUser) => {
             if (err) return next(err);
             res.json({ favoritedArticle, favoritedUser });
@@ -232,13 +277,15 @@ router.delete("/:slug/favorite", (req, res, next) => {
       return res.json({ success: false, message: "No article Found!" });
     Article.findOneAndUpdate(
       { slug },
-      { $pull: { favorites: req.user.userId } },{new:true},
+      { $pull: { favorites: req.user.userId } },
+      { new: true },
       (err, unfavoritedArticle) => {
         if (err) return next(err);
-        unfavoritedArticle.favoritesCount-1;
+        unfavoritedArticle.favoritesCount - 1;
         User.findOneAndUpdate(
           { username: req.user.username },
-          { $pull: { favorited: article._id } },{new:true},
+          { $pull: { favorited: article._id } },
+          { new: true },
           (err, unfavoritedUser) => {
             if (err) return next(err);
             res.json({ unfavoritedArticle, unfavoritedUser });

@@ -15,6 +15,7 @@ const indexRouter = require("./routes/index");
 const apiRouter = require("./routes/api/users");
 const profileRouter = require("./routes/api/profiles");
 const articlesRouter = require("./routes/api/articles");
+const tagsRouter = require("./routes/api/tags");
 
 // connecting app to mongodb
 mongoose.connect(
@@ -57,6 +58,7 @@ app.use("/", indexRouter);
 app.use("/api/v1/users", apiRouter);
 app.use("/api/v1/profiles", profileRouter);
 app.use("/api/v1/articles", articlesRouter);
+app.use("/api/v1/tags",tagsRouter);
 
 
 // error handler

@@ -29,7 +29,8 @@ router.get(
 router.post("/", (req, res, next) => {
   User.create(req.body, (err, user) => {
     if (err) return next(err);
-    res.json(user);
+    // res.json(user)
+    res.json({success:true,message:"Registration Succesful!"});
   });
 });
 
