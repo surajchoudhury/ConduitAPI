@@ -31,12 +31,14 @@ router.get("/feed", loggedUser, (req, res, next) => {
   User.findOne({ username: req.user.username }, (err, user) => {
     if (err) return next(err);
     if (user.following.length) {
-      user.following.forEach(user => {
-        Article.find({ username: user })
+      let feedsArr = [];
+      user.following.forEach(followingUser => {
+        Article.findOne( {author:followingUser._id} )
           .populate("author", "username")
           .exec((err, articleFeeds) => {
             if (err) return next(err);
-            return res.json({ articleFeeds });
+            feedsArr.push(articleFeeds);
+            return res.json(feedsArr)
           });
       });
     } else {
