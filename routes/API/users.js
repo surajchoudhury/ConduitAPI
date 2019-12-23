@@ -30,7 +30,7 @@ router.post("/", (req, res, next) => {
   User.create(req.body, (err, user) => {
     if (err) return next(err);
     // res.json(user)
-    res.json({success:true,message:"Registration Succesful!"});
+    res.json({ success: true, message: "Registration Succesful!" });
   });
 });
 
@@ -51,7 +51,7 @@ router.post("/login", (req, res, next) => {
           userId: user._id,
           email: user.email,
           username: user.username,
-          image: user.image,
+          avatar: user.avatar,
           bio: user.bio,
           followers: user.followers,
           following: user.following
@@ -74,7 +74,7 @@ router.use(loggedUser);
 
 router.get("/", (req, res, next) => {
   let { username } = req.user;
-  User.findOne({ username }, "-password", (err, user) => {
+  User.findOne({ username }, "-password").populate("article").exec((err, user) => {
     if (err)
       return res.status(422).json({
         errors: {

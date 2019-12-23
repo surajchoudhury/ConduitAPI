@@ -9,7 +9,7 @@ exports.verifyToken = (req, res, next) => {
           userId: decoded.userId,
           email: decoded.email,
           token,
-          image:decoded.image,
+          avatar:decoded.avatar,
           bio:decoded.bio,
           username: decoded.username,
           followers:decoded.followers,

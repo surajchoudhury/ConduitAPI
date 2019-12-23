@@ -13,7 +13,7 @@ const loggedUser = auth.verifyToken;
 
 router.get("/", (req, res, next) => {
   Article.find({})
-    .populate("author", "username email")
+    .populate("author")
     .exec((err, articles) => {
       if (err) return next(err);
       if (!articles)
@@ -33,12 +33,12 @@ router.get("/feed", loggedUser, (req, res, next) => {
     if (user.following.length) {
       let feedsArr = [];
       user.following.forEach(followingUser => {
-        Article.findOne( {author:followingUser._id} )
-          .populate("author", "username")
+        Article.find({ author: followingUser._id })
+          .populate("author")
           .exec((err, articleFeeds) => {
             if (err) return next(err);
             feedsArr.push(articleFeeds);
-            return res.json(feedsArr)
+            return res.json(feedsArr);
           });
       });
     } else {
@@ -52,7 +52,7 @@ router.get("/feed", loggedUser, (req, res, next) => {
 router.get("/:slug", (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug })
-    .populate("author", "username email")
+    .populate("author")
     .exec((err, article) => {
       if (err) return next(err);
       if (!article)
@@ -72,6 +72,7 @@ router.use(loggedUser);
 
 router.post("/", (req, res, next) => {
   req.body.userId = req.user.userId;
+  console.log(req.body.userId);
   Article.create(req.body, (err, createdArticle) => {
     if (err) return next(err);
     if (!createdArticle)
@@ -79,9 +80,13 @@ router.post("/", (req, res, next) => {
         success: false,
         message: "no articles to post!"
       });
-
-    // createdArticle.author._id = req.user.userId;
-    
+    Article.findByIdAndUpdate(
+      createdArticle._id,
+      { author: req.body.userId },
+      (err, updated) => {
+        if (err) return next(err);
+      }
+    );
     createdArticle.tagList.forEach(tag => {
       Tag.findOne({ body: tag }, (err, foundTag) => {
         if (err) return next(err);
@@ -104,14 +109,15 @@ router.post("/", (req, res, next) => {
         }
       });
     });
-      // User.findByIdAndUpdate(
-      // req.article.userId,
-      // { $push: { article: createdArticle._id } },
-      // (err, createdArticle) => {
-      //   if (err) res.json({ message: "Can't create Article" });
-        res.status(200).json(createdArticle);
-      // }
-    // );
+    User.findByIdAndUpdate(
+      req.body.userId,
+      { article: createdArticle._id },
+      (err, updatedArticle) => {
+        if (err) return next({ err });
+      }
+    );
+    if (err) res.json({ message: "Can't create Article" });
+    res.status(200).json(createdArticle);
   });
 });
 
@@ -123,15 +129,15 @@ router.put("/:slug", (req, res, next) => {
     if (err) return next(err);
     // console.log(req.user.userId, article.userId);
     // if (req.user.userId == article.userId) {
-      Article.findOneAndUpdate({ slug }, req.body, (err, updatedArticle) => {
-        if (err) return next(err);
-        if (!article)
-          return res.json({
-            success: false,
-            message: "no articles to update!"
-          });
-        res.status(200).json(updatedArticle);
-      });
+    Article.findOneAndUpdate({ slug }, req.body, (err, updatedArticle) => {
+      if (err) return next(err);
+      if (!article)
+        return res.json({
+          success: false,
+          message: "no articles to update!"
+        });
+      res.status(200).json(updatedArticle);
+    });
     // } else {
     //   res.json({ success: false, message: "You can't delete this article!" });
     // }
@@ -150,7 +156,9 @@ router.delete("/:slug", (req, res, next) => {
         message: "no articles to delete!"
       });
 
-    res.status(200).json({ success: true, message: "Article deleted succesfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Article deleted succesfully" });
   });
 });
 

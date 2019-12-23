@@ -7,6 +7,12 @@ const User = require("../../models/user");
 router.use(loggedUser);
 
 // get user profile
+router.get("/",(req,res)=> {
+  User.find({},(err,profiles)=> {
+    if(err) return next(err);
+    res.json({profiles});
+  })
+})
 router.get("/:username", (req, res) => {
   let username = req.params.username;
   User.findOne({ username }, "-password")
@@ -18,9 +24,7 @@ router.get("/:username", (req, res) => {
     })
     .exec((err, profile) => {
       if (err)
-        res.status(422).json({
-          success: false,
-          message: "unexpected error"
+        res.status(422).json({err
         });
       res.status(200).json(profile);
     });
@@ -97,7 +101,7 @@ router.post("/:username/follow", (req, res, next) => {
 //       res.json({ other, user });
 //     } else if (!otherUser.followers.includes(req.user.username)) {
 //       res.json({ mgs: "Not following" });
-    
+
 //     } else {
 //       res.json({msg:"User not found!"});
 //     }
