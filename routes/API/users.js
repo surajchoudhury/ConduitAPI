@@ -39,10 +39,13 @@ router.post("/login", (req, res, next) => {
   let { email, password } = req.body;
   User.findOne({ email }, (err, user) => {
     if (err) return next(err);
-    if (!user) res.json({ success: false, message: "Invalid Email ID" });
+    if (!user) return res.json({ success: false, message: "Invalid Email ID" });
     user.verifyPassword(password, (err, matched) => {
       if (err) return next(err);
-      if (!matched) res.json({ success: false, message: "invalid password" });
+      if (!matched)
+        return res
+          .status(422)
+          .json({ success: false, message: "invalid password" });
 
       //  jwt authentication
 
@@ -74,18 +77,22 @@ router.use(loggedUser);
 
 router.get("/", (req, res, next) => {
   let { username } = req.user;
-  User.findOne({ username }, "-password").populate("article").exec((err, user) => {
-    if (err)
-      return res.status(422).json({
-        errors: {
-          body: "unexpected error!"
-        }
-      });
-    res
-      .contentType("application/json")
-      .status(200)
-      .json(user);
-  });
+  User.findOne({ username }, "-password")
+    .populate("article")
+    .populate("favorited")
+    .populate('followers')
+    .exec((err, user) => {
+      if (err)
+        return res.status(422).json({
+          errors: {
+            body: "unexpected error!"
+          }
+        });
+      res
+        .contentType("application/json")
+        .status(200)
+        .json(user);
+    });
 });
 
 // update current user

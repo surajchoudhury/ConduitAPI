@@ -7,12 +7,13 @@ const User = require("../../models/user");
 router.use(loggedUser);
 
 // get user profile
-router.get("/",(req,res)=> {
-  User.find({},(err,profiles)=> {
-    if(err) return next(err);
-    res.json({profiles});
-  })
-})
+
+router.get("/", (req, res) => {
+  User.find({}, (err, profiles) => {
+    if (err) return next(err);
+    res.json({ profiles });
+  });
+});
 router.get("/:username", (req, res) => {
   let username = req.params.username;
   User.findOne({ username }, "-password")
@@ -23,9 +24,7 @@ router.get("/:username", (req, res) => {
       }
     })
     .exec((err, profile) => {
-      if (err)
-        res.status(422).json({err
-        });
+      if (err) res.status(422).json({ err });
       res.status(200).json(profile);
     });
 });
@@ -56,10 +55,11 @@ router.post("/:username/follow", (req, res, next) => {
   User.findOne({ username }, (err, user) => {
     if (err) return next(err);
     if (!user) return res.json({ success: false, message: "user not found!" });
-    if (!user.followers.includes(req.user.username)) {
+    console.log(user.followers.includes(currentUser),user.followers)
+    if (!user.followers.includes(currentUser)) {
       User.findOneAndUpdate(
         { username },
-        { $push: { followers: req.user.username } },
+        { $push: { followers: currentUser } },
         { new: true },
         (err, followingUser) => {
           if (err) return next(err);
@@ -67,17 +67,22 @@ router.post("/:username/follow", (req, res, next) => {
             return res.json({ success: false, message: "User not found!" });
           User.findByIdAndUpdate(
             currentUser,
-            { $push: { following: followingUser.username } },
+            { $push: { following: followingUser._id } },
             { new: true },
             (err, currentuser) => {
               if (err) return next(err);
-              res.json({ followingUser, currentuser });
+              res.json({
+                success: true,
+                message: "successfully added in following List!",
+                followingUser,
+                currentuser
+              });
             }
           );
         }
       );
     } else {
-      res.json({ user });
+      res.json({ success: false, message: "Already following!!" });
     }
   });
 });
@@ -115,10 +120,10 @@ router.delete("/:username/follow", (req, res, next) => {
   let currentUser = req.user.userId;
   User.findOne({ username }, (err, user) => {
     if (err) return next(err);
-    if (user.followers.includes(req.user.username)) {
+    if (user.followers.includes(currentUser)) {
       User.findOneAndUpdate(
         { username },
-        { $pull: { followers: req.user.username } },
+        { $pull: { followers: currentUser } },
         { new: true },
         (err, unfollowUser) => {
           if (err) return next(err);
@@ -126,17 +131,26 @@ router.delete("/:username/follow", (req, res, next) => {
             return res.json({ success: false, message: "User not found!" });
           User.findByIdAndUpdate(
             currentUser,
-            { $pull: { following: unfollowUser.username } },
+            { $pull: { following: unfollowUser._id } },
             { new: true },
             (err, currentuser) => {
               if (err) return next(err);
-              res.json({ unfollowUser, currentuser });
+              res.json({
+                success: true,
+                message: "succesfully romoved from following list!",
+                unfollowUser,
+                currentuser
+              });
             }
           );
         }
       );
     } else {
-      res.json({ user });
+      res.json({
+        success: false,
+        message: "already removed from following list!",
+        user
+      });
     }
   });
 });

@@ -13,7 +13,7 @@ const loggedUser = auth.verifyToken;
 
 router.get("/", (req, res, next) => {
   Article.find({})
-    .populate("author")
+    .populate("author", "-password")
     .exec((err, articles) => {
       if (err) return next(err);
       if (!articles)
@@ -31,14 +31,12 @@ router.get("/feed", loggedUser, (req, res, next) => {
   User.findOne({ username: req.user.username }, (err, user) => {
     if (err) return next(err);
     if (user.following.length) {
-      let feedsArr = [];
       user.following.forEach(followingUser => {
         Article.find({ author: followingUser._id })
-          .populate("author")
+          .populate("author", "-password")
           .exec((err, articleFeeds) => {
             if (err) return next(err);
-            feedsArr.push(articleFeeds);
-            return res.json(feedsArr);
+            return res.json({ success: true, articleFeeds });
           });
       });
     } else {
@@ -52,7 +50,19 @@ router.get("/feed", loggedUser, (req, res, next) => {
 router.get("/:slug", (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug })
-    .populate("author")
+    .populate({
+      path: "author",
+      populate: {
+        path: "article",
+        populate: "author"
+      }
+    })
+    .populate({
+      path: "comments",
+      populate: {
+        path: "author"
+      }
+    })
     .exec((err, article) => {
       if (err) return next(err);
       if (!article)
@@ -72,7 +82,6 @@ router.use(loggedUser);
 
 router.post("/", (req, res, next) => {
   req.body.userId = req.user.userId;
-  console.log(req.body.userId);
   Article.create(req.body, (err, createdArticle) => {
     if (err) return next(err);
     if (!createdArticle)
@@ -87,7 +96,7 @@ router.post("/", (req, res, next) => {
         if (err) return next(err);
       }
     );
-    createdArticle.tagList.forEach(tag => {
+    createdArticle.tagList.split(",").forEach(tag => {
       Tag.findOne({ body: tag }, (err, foundTag) => {
         if (err) return next(err);
         if (!foundTag) {
@@ -111,13 +120,15 @@ router.post("/", (req, res, next) => {
     });
     User.findByIdAndUpdate(
       req.body.userId,
-      { article: createdArticle._id },
+      { $push: { article: createdArticle._id } },
       (err, updatedArticle) => {
         if (err) return next({ err });
       }
     );
     if (err) res.json({ message: "Can't create Article" });
-    res.status(200).json(createdArticle);
+    res
+      .status(200)
+      .json({ success: true, message: "Article Published Succesfully!" });
   });
 });
 
@@ -148,25 +159,31 @@ router.put("/:slug", (req, res, next) => {
 
 router.delete("/:slug", (req, res, next) => {
   let slug = req.params.slug;
-  Article.findOneAndDelete({ slug }, (err, article) => {
+  Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
     if (!article)
       return res.json({
         success: false,
-        message: "no articles to delete!"
+        message: "no articles to found!"
       });
-
-    res
-      .status(200)
-      .json({ success: true, message: "Article deleted succesfully" });
+    Article.findOneAndDelete({ slug }, (err, articleToDelete) => {
+      if (err) return next(err);
+      if (!articleToDelete) {
+        return res.json({ success: false, message: "No Article found!" });
+      }
+      res
+        .status(200)
+        .json({ success: true, message: "Article deleted succesfully" });
+    });
   });
 });
 
-// ///////////////////////////////////// comments //////////////////////////////////////////
+/////////////////////////////////////// comments //////////////////////////////////////////
 
 // post comments
 
 router.post("/:slug/comments", (req, res, next) => {
+  let userId = req.user.userId;
   Comment.create(req.body, (err, comment) => {
     if (err) return next(err);
     if (!comment)
@@ -174,65 +191,41 @@ router.post("/:slug/comments", (req, res, next) => {
         success: false,
         message: "No comments to post!"
       });
+    Comment.findByIdAndUpdate(
+      comment._id,
+      { author: userId },
+      (err, updateUser) => {
+        if (err) return next(err);
+      }
+    );
     Article.findOneAndUpdate(
       { slug: req.params.slug },
       { $push: { comments: comment._id } },
       { new: true },
       (err, article) => {
-        res.status(200).json(comment);
+        res
+          .status(200)
+          .json({ success: true, message: "Comment added!", comment });
       }
     );
   });
 });
 
-// get comments
-
-router.get("/:slug/comments", (req, res, next) => {
-  Comment.find({}, (err, comments) => {
-    if (err) return next(err);
-    if (!comments)
-      return res.json({
-        success: false,
-        message: "no comments found!"
-      });
-    res.status(200).json({ comments });
-  });
-});
-
-// get comment
-
-// router.get("/:slug/comments/:id", (req, res, next) => {
-//   let id = req.params.id;
-//   Comment.findById(id, (err, comment) => {
-//     if (err) return next(err);
-//     if (!comment)
-//       return res.json({
-//         success: false,
-//         message: "comment not found!"
-//       });
-//     res.status(200).json(comment);
-//   });
-// });
-
-// update comment
-
-// router.put("/:slug/comments/:id", (req, res, next) => {
-//   let id = req.params.id;
-//   Comment.findByIdAndUpdate(id, req.body, (err, comment) => {
-//     if (err) return next(err);
-//     if (!comment)
-//       return res.json({
-//         success: false,
-//         message: "no comments to update!"
-//       });
-//     res.json(comment);
-//   });
-// });
-
 // delete comment
 
 router.delete("/:slug/comments/:id", (req, res, next) => {
   let id = req.params.id;
+  let slug = req.params.slug;
+  Article.findOneAndUpdate(
+    { slug },
+    { $pull: { comments: id } },
+    { new: true },
+    (err, article) => {
+      if (err) return next(err);
+      if (!article)
+        return res.json({ success: false, message: "No article found!" });
+    }
+  );
   Comment.findByIdAndDelete(id, (err, comment) => {
     if (err) return next(err);
     if (!comment)
@@ -241,7 +234,7 @@ router.delete("/:slug/comments/:id", (req, res, next) => {
         message: "no comments to Delete!"
       });
     res.json({
-      succes: true,
+      success: true,
       message: "comment deleted Succesfully"
     });
   });
@@ -251,7 +244,6 @@ router.delete("/:slug/comments/:id", (req, res, next) => {
 
 router.post("/:slug/favorite", (req, res, next) => {
   let slug = req.params.slug;
-  console.log(req.user);
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
     if (!article)

@@ -26,7 +26,8 @@ const userSchema = new Schema(
       type: String
     },
     following: {
-      type: [String]
+      type: [Schema.Types.ObjectId],
+      ref:'User'
     },
     followers: {
       type: [String]
@@ -37,14 +38,18 @@ const userSchema = new Schema(
         ref: "Article"
       }
     ],
-    comment: {
-      type: Schema.Types.ObjectId,
-      ref: "Comment"
-    },
-    article: {
-      type: Schema.Types.ObjectId,
-      ref: "Article"
-    }
+    comment: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Comment"
+      }
+    ],
+    article: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Article"
+      }
+    ]
   },
   { timestamps: true }
 );

@@ -20,7 +20,7 @@ const articleSchema = new Schema(
     image: {
       type: String
     },
-    tagList: [String],
+    tagList: String,
     favorited: Boolean,
     favoritesCount: {
       type: Number,
@@ -30,13 +30,12 @@ const articleSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User"
     },
-    comments: {
-      type: [String]
-    },
-    comment: {
-      type: Schema.Types.ObjectId,
-      ref: "Comment"
-    },
+    comments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Comment"
+      }
+    ],
     favorites: [
       {
         type: Schema.Types.ObjectId,
@@ -50,7 +49,7 @@ const articleSchema = new Schema(
 articleSchema.pre("save", function(next) {
   if (this.title && this.isModified("title")) {
     var slugged = slug(this.title, { lower: true });
-    this.slug = slugged+"-"+this._id;
+    this.slug = slugged + "-" + this._id;
     next();
   } else {
     next();
