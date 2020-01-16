@@ -29,7 +29,7 @@ router.get("/", (req, res, next) => {
 // get recent articles from users you follow .
 
 router.get("/feed", loggedUser, (req, res, next) => {
-  User.findOne({ username: req.user.username }, (err, user) => {
+  User.findById(req.user.userId, (err, user) => {
     if (err) return next(err);
     if (user.following && user.following.length) {
       Article.find({ author: { $in: user.following } })
