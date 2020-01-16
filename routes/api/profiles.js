@@ -21,14 +21,14 @@ router.get("/:username", (req, res) => {
   let username = req.params.username;
   User.findOne({ username }, "-password")
     .populate({
-      path: "article",
+      path: "article favorited followers following",
       populate: {
         path: "author"
       }
     })
     .exec((err, profile) => {
       if (err) res.status(422).json({ err });
-      res.status(200).json(profile);
+      res.status(200).json({ success: true, profile });
     });
 });
 
