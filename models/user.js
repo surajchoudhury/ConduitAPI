@@ -27,9 +27,15 @@ const userSchema = new Schema(
     },
     following: {
       type: [Schema.Types.ObjectId],
-      ref:'User'
+      ref: "User"
+    },
+    followingUsers: {
+      type: [String]
     },
     followers: {
+      type: [Schema.Types.ObjectId]
+    },
+    followerUsers: {
       type: [String]
     },
     favorited: [

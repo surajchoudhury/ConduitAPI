@@ -13,6 +13,7 @@ const loggedUser = auth.verifyToken;
 
 router.get("/", (req, res, next) => {
   Article.find({})
+    .sort({ datefield: -1 })
     .populate("author", "-password")
     .exec((err, articles) => {
       if (err) return next(err);
@@ -30,15 +31,14 @@ router.get("/", (req, res, next) => {
 router.get("/feed", loggedUser, (req, res, next) => {
   User.findOne({ username: req.user.username }, (err, user) => {
     if (err) return next(err);
-    if (user.following.length) {
-      user.following.forEach(followingUser => {
-        Article.find({ author: followingUser._id })
-          .populate("author", "-password")
-          .exec((err, articleFeeds) => {
-            if (err) return next(err);
-            return res.json({ success: true, articleFeeds });
-          });
-      });
+    if (user.following && user.following.length) {
+      Article.find({ author: { $in: user.following } })
+        .sort({ datefield: 1 })
+        .populate("author", "-password")
+        .exec((err, articleFeeds) => {
+          if (err) return next(err);
+          return res.json({ success: true, articleFeeds });
+        });
     } else {
       res.json({ success: false, message: "follow to get feeds!" });
     }
@@ -53,8 +53,10 @@ router.get("/:slug", (req, res, next) => {
     .populate({
       path: "author",
       populate: {
-        path: "article",
-        populate: "author"
+        path: "favorited following followers article",
+        populate: {
+          path: "author"
+        }
       }
     })
     .populate({
@@ -138,8 +140,6 @@ router.put("/:slug", (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
-    // console.log(req.user.userId, article.userId);
-    // if (req.user.userId == article.userId) {
     Article.findOneAndUpdate({ slug }, req.body, (err, updatedArticle) => {
       if (err) return next(err);
       if (!article)
@@ -147,11 +147,8 @@ router.put("/:slug", (req, res, next) => {
           success: false,
           message: "no articles to update!"
         });
-      res.status(200).json(updatedArticle);
+      res.status(200).json({ success: true, updatedArticle });
     });
-    // } else {
-    //   res.json({ success: false, message: "You can't delete this article!" });
-    // }
   });
 });
 
@@ -248,24 +245,32 @@ router.post("/:slug/favorite", (req, res, next) => {
     if (err) return next(err);
     if (!article)
       return res.json({ success: false, message: "No article Found!" });
-    Article.findOneAndUpdate(
-      { slug },
-      { $push: { favorites: req.user.userId } },
-      { new: true },
-      (err, favoritedArticle) => {
-        if (err) return next(err);
-        favoritedArticle.favoritesCount++;
-        User.findOneAndUpdate(
-          { username: req.user.username },
-          { $push: { favorited: article._id } },
-          { new: true },
-          (err, favoritedUser) => {
-            if (err) return next(err);
-            res.json({ favoritedArticle, favoritedUser });
-          }
-        );
-      }
-    );
+    if (!article.favorites.includes(req.user.userId)) {
+      Article.findOneAndUpdate(
+        { slug },
+        { $push: { favorites: req.user.userId } },
+        { new: true },
+        (err, favoritedArticle) => {
+          if (err) return next(err);
+          favoritedArticle.favoritesCount++;
+          User.findOneAndUpdate(
+            { username: req.user.username },
+            { $push: { favorited: article._id } },
+            { new: true },
+            (err, favoritedUser) => {
+              if (err) return next(err);
+              res.json({ success: true, favoritedArticle, favoritedUser });
+            }
+          );
+        }
+      );
+    } else {
+      res.json({
+        success: false,
+        message: "Already favorited article!",
+        article
+      });
+    }
   });
 });
 
@@ -277,24 +282,32 @@ router.delete("/:slug/favorite", (req, res, next) => {
     if (err) return next(err);
     if (!article)
       return res.json({ success: false, message: "No article Found!" });
-    Article.findOneAndUpdate(
-      { slug },
-      { $pull: { favorites: req.user.userId } },
-      { new: true },
-      (err, unfavoritedArticle) => {
-        if (err) return next(err);
-        unfavoritedArticle.favoritesCount - 1;
-        User.findOneAndUpdate(
-          { username: req.user.username },
-          { $pull: { favorited: article._id } },
-          { new: true },
-          (err, unfavoritedUser) => {
-            if (err) return next(err);
-            res.json({ unfavoritedArticle, unfavoritedUser });
-          }
-        );
-      }
-    );
+    if (article.favorites.includes(req.user.userId)) {
+      Article.findOneAndUpdate(
+        { slug },
+        { $pull: { favorites: req.user.userId } },
+        { new: true },
+        (err, unfavoritedArticle) => {
+          if (err) return next(err);
+          unfavoritedArticle.favoritesCount - 1;
+          User.findOneAndUpdate(
+            { username: req.user.username },
+            { $pull: { favorited: article._id } },
+            { new: true },
+            (err, unfavoritedUser) => {
+              if (err) return next(err);
+              res.json({ success: true, unfavoritedArticle, unfavoritedUser });
+            }
+          );
+        }
+      );
+    } else {
+      res.json({
+        success: false,
+        message: "Already removed from favorite list!",
+        article
+      });
+    }
   });
 });
 

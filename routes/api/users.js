@@ -78,9 +78,18 @@ router.use(loggedUser);
 router.get("/", (req, res, next) => {
   let { username } = req.user;
   User.findOne({ username }, "-password")
-    .populate("article")
-    .populate("favorited")
-    .populate('followers')
+    .populate({
+      path: "article",
+      populate: {
+        path: "author"
+      }
+    })
+    .populate({
+      path: "favorited following followers",
+      populate: {
+        path: "author"
+      }
+    })
     .exec((err, user) => {
       if (err)
         return res.status(422).json({

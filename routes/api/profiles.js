@@ -9,11 +9,14 @@ router.use(loggedUser);
 // get user profile
 
 router.get("/", (req, res) => {
-  User.find({}, (err, profiles) => {
-    if (err) return next(err);
-    res.json({ profiles });
-  });
+  User.find({})
+    .populate("following")
+    .exec((err, profiles) => {
+      if (err) return next(err);
+      res.json({ profiles });
+    });
 });
+
 router.get("/:username", (req, res) => {
   let username = req.params.username;
   User.findOne({ username }, "-password")
@@ -55,11 +58,10 @@ router.post("/:username/follow", (req, res, next) => {
   User.findOne({ username }, (err, user) => {
     if (err) return next(err);
     if (!user) return res.json({ success: false, message: "user not found!" });
-    console.log(user.followers.includes(currentUser),user.followers)
     if (!user.followers.includes(currentUser)) {
       User.findOneAndUpdate(
         { username },
-        { $push: { followers: currentUser } },
+        { $push: { followers: currentUser, followerUsers: currentUser } },
         { new: true },
         (err, followingUser) => {
           if (err) return next(err);
@@ -67,7 +69,12 @@ router.post("/:username/follow", (req, res, next) => {
             return res.json({ success: false, message: "User not found!" });
           User.findByIdAndUpdate(
             currentUser,
-            { $push: { following: followingUser._id } },
+            {
+              $push: {
+                following: followingUser._id,
+                followingUsers: followingUser._id
+              }
+            },
             { new: true },
             (err, currentuser) => {
               if (err) return next(err);
@@ -123,7 +130,7 @@ router.delete("/:username/follow", (req, res, next) => {
     if (user.followers.includes(currentUser)) {
       User.findOneAndUpdate(
         { username },
-        { $pull: { followers: currentUser } },
+        { $pull: { followers: currentUser, followerUsers: currentUser } },
         { new: true },
         (err, unfollowUser) => {
           if (err) return next(err);
@@ -131,7 +138,12 @@ router.delete("/:username/follow", (req, res, next) => {
             return res.json({ success: false, message: "User not found!" });
           User.findByIdAndUpdate(
             currentUser,
-            { $pull: { following: unfollowUser._id } },
+            {
+              $pull: {
+                following: unfollowUser._id,
+                followingUsers: unfollowUser._id
+              }
+            },
             { new: true },
             (err, currentuser) => {
               if (err) return next(err);
