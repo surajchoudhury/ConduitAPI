@@ -11,6 +11,7 @@ require("dotenv").config();
 require("./modules/passport");
 
 // routes
+
 const indexRouter = require("./routes/index");
 const apiRouter = require("./routes/api/users");
 const profileRouter = require("./routes/api/profiles");
@@ -18,18 +19,21 @@ const articlesRouter = require("./routes/api/articles");
 const tagsRouter = require("./routes/api/tags");
 
 // connecting app to mongodb
+
 mongoose.connect(
-  "mongodb://localhost/conduit",
+  "mongodb://sunny:sunny007@ds259070.mlab.com:59070/conduit",
   { useNewUrlParser: true, useUnifiedTopology: true },
   err => {
-    console.log("Connected to mongoDB", err ? false : true);
+    console.log("Connected to mongoDB", err ? err : true);
   }
 );
 
 // initializing express in App
+
 const app = express();
 
 // middlewares
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -37,6 +41,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 // session
+
 app.use(
   session({
     secret: process.env.secret,
@@ -54,17 +59,20 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // routes
+
 app.use("/", indexRouter);
 app.use("/api/v1/users", apiRouter);
 app.use("/api/v1/profiles", profileRouter);
 app.use("/api/v1/articles", articlesRouter);
-app.use("/api/v1/tags",tagsRouter);
-
+app.use("/api/v1/tags", tagsRouter);
+app.get("*", (req, res, next) => {
+  res.sendFile(__dirname, "public/index.html");
+});
 
 // error handler
 
-app.use((err,req,res,next)=> {
-  res.status(500).json({success:false,err});
-})
+app.use((err, req, res, next) => {
+  res.status(500).json({ success: false, err });
+});
 
 module.exports = app;
