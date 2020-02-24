@@ -3,16 +3,15 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const mongoose = require("mongoose");
-const passport = require("passport");
+// const passport = require("passport");
 const session = require("express-session");
 const MongoStore = require("connect-mongo")(session);
 
 require("dotenv").config();
-require("./modules/passport");
-
+// require("./modules/passport");
 // routes
 
-const indexRouter = require("./routes/index");
+// const indexRouter = require("./routes/index");
 const apiRouter = require("./routes/api/users");
 const profileRouter = require("./routes/api/profiles");
 const articlesRouter = require("./routes/api/articles");
@@ -58,12 +57,12 @@ app.use(
 
 //passport
 
-app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.initialize());
+// app.use(passport.session());
 
 // routes
 
-app.use("/", indexRouter);
+// app.use("/", indexRouter);
 app.use("/api/v1/users", apiRouter);
 app.use("/api/v1/profiles", profileRouter);
 app.use("/api/v1/articles", articlesRouter);
