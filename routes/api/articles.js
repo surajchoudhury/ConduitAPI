@@ -5,6 +5,7 @@ const Comment = require("../../models/comment");
 const auth = require("../../modules/auth");
 const User = require("../../models/user");
 const Tag = require("../../models/tag");
+const showdown = require("showdown");
 const loggedUser = auth.verifyToken;
 
 ////////////////////////////////////// articles //////////////////////////////////////////
@@ -13,7 +14,7 @@ const loggedUser = auth.verifyToken;
 
 router.get("/", (req, res, next) => {
   Article.find({})
-    .sort({ "createdAt": -1 })
+    .sort({ createdAt: -1 })
     .populate("author", "-password")
     .exec((err, articles) => {
       if (err) return next(err);
@@ -33,7 +34,7 @@ router.get("/feed", loggedUser, (req, res, next) => {
     if (err) return next(err);
     if (user.following && user.following.length) {
       Article.find({ author: { $in: user.following } })
-        .sort({ "createdAt": -1 })
+        .sort({ createdAt: -1 })
         .populate("author", "-password")
         .exec((err, articleFeeds) => {
           if (err) return next(err);
@@ -72,17 +73,23 @@ router.get("/:slug", (req, res, next) => {
           success: false,
           message: "enter valid article slug!"
         });
-      res.json(article);
+
+        (converter = new showdown.Converter()),
+        (text = article.body),
+        (html = converter.makeHtml(text));
+      article.body = html;
+      Article.findOne({ slug }, (err, MDarticle) => {
+        if (err) return next(err);
+        res.json({ success: true, article, MDarticle });
+      });
     });
 });
 
 // /////////////////////////////// logged user can only access //////////////////////////
 
-
-
 // post article
 
-router.post("/",loggedUser, (req, res, next) => {
+router.post("/", loggedUser, (req, res, next) => {
   req.body.userId = req.user.userId;
   Article.create(req.body, (err, createdArticle) => {
     if (err) return next(err);
@@ -136,7 +143,7 @@ router.post("/",loggedUser, (req, res, next) => {
 
 // update article
 
-router.put("/:slug",loggedUser, (req, res, next) => {
+router.put("/:slug", loggedUser, (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
@@ -154,7 +161,7 @@ router.put("/:slug",loggedUser, (req, res, next) => {
 
 // delete article
 
-router.delete("/:slug",loggedUser, (req, res, next) => {
+router.delete("/:slug", loggedUser, (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
@@ -179,7 +186,7 @@ router.delete("/:slug",loggedUser, (req, res, next) => {
 
 // post comments
 
-router.post("/:slug/comments",loggedUser, (req, res, next) => {
+router.post("/:slug/comments", loggedUser, (req, res, next) => {
   let userId = req.user.userId;
   Comment.create(req.body, (err, comment) => {
     if (err) return next(err);
@@ -210,7 +217,7 @@ router.post("/:slug/comments",loggedUser, (req, res, next) => {
 
 // delete comment
 
-router.delete("/:slug/comments/:id",loggedUser, (req, res, next) => {
+router.delete("/:slug/comments/:id", loggedUser, (req, res, next) => {
   let id = req.params.id;
   let slug = req.params.slug;
   Article.findOneAndUpdate(
@@ -239,7 +246,7 @@ router.delete("/:slug/comments/:id",loggedUser, (req, res, next) => {
 
 //favourite an Article
 
-router.post("/:slug/favorite", loggedUser,(req, res, next) => {
+router.post("/:slug/favorite", loggedUser, (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
@@ -276,7 +283,7 @@ router.post("/:slug/favorite", loggedUser,(req, res, next) => {
 
 // Unfavourite an Article
 
-router.delete("/:slug/favorite", loggedUser,(req, res, next) => {
+router.delete("/:slug/favorite", loggedUser, (req, res, next) => {
   let slug = req.params.slug;
   Article.findOne({ slug }, (err, article) => {
     if (err) return next(err);
